@@ -1,16 +1,14 @@
 ## Project Overview
 
-Describe what the project does and the core stack in one or two sentences.
-
-Example:
-
-`<project-name>` is `<something for one-sentence purpose>`. Built with `<language/framework>`, using `<data/storage>`, and tested with `<testing tool>`.
+`ez-banana` is a Python app that generates images from prompts through OpenRouter, exposed as both a CLI and a FastMCP stdio server tool. Built with Python 3.14, `requests`, and FastMCP, using local filesystem output storage, and tested with `unittest`.
 
 ## Structure Map
 
-List agent-facing modules at folder level (include single-file modules but ignore internal files).
-Exclude all dot-prefixed folders/files (e.g., `.agent/`, `.cache/`).
+- `main.py` - top-level local CLI entrypoint.
+- `src/ez_banana/` - application package (CLI flow, shared generation logic, OpenRouter integration, MCP server, models, validation).
+- `tests/` - unit tests for CLI and MCP behavior.
+- `docs/` - project and MCP notes.
 
 ### Development Guide
 
-Provide the minimal local workflow in one or two sentences, including how to run, verify, and build.
+Run `uv sync`, then execute `uv run python main.py --prompt "<prompt>"` for CLI usage or `uv run ez-banana-mcp` for MCP stdio server usage. Verify with `uv run python -m unittest discover -s tests -v` and build with `uv build`.
