@@ -36,7 +36,11 @@ class OpenRouterCliTests(unittest.TestCase):
             {cli.OPENROUTER_API_KEY_ENV: "test-key"},
             clear=False,
         ):
-            with patch("sys.stdout", stdout), patch("sys.stderr", stderr):
+            with (
+                patch("main.load_dotenv", return_value=False),
+                patch("sys.stdout", stdout),
+                patch("sys.stderr", stderr),
+            ):
                 code = cli.main(argv)
         return code, stdout.getvalue().strip(), stderr.getvalue().strip()
 
@@ -132,7 +136,11 @@ class OpenRouterCliTests(unittest.TestCase):
         stderr = io.StringIO()
         with patch.dict(os.environ, {}, clear=False):
             os.environ.pop(cli.OPENROUTER_API_KEY_ENV, None)
-            with patch("sys.stdout", stdout), patch("sys.stderr", stderr):
+            with (
+                patch("main.load_dotenv", return_value=False),
+                patch("sys.stdout", stdout),
+                patch("sys.stderr", stderr),
+            ):
                 code = cli.main(["--prompt", "x"])
 
         self.assertEqual(code, 1)
