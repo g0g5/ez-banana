@@ -11,7 +11,9 @@ from unittest.mock import patch
 
 import requests
 
-import main as cli
+from src.ez_banana import config
+from src.ez_banana import output
+from src.ez_banana import cli
 
 
 class FakeResponse:
@@ -33,11 +35,10 @@ class OpenRouterCliTests(unittest.TestCase):
         stderr = io.StringIO()
         with patch.dict(
             os.environ,
-            {cli.OPENROUTER_API_KEY_ENV: "test-key"},
+            {config.OPENROUTER_API_KEY_ENV: "test-key"},
             clear=False,
         ):
             with (
-                patch("main.load_dotenv", return_value=False),
                 patch("sys.stdout", stdout),
                 patch("sys.stderr", stderr),
             ):
@@ -60,7 +61,7 @@ class OpenRouterCliTests(unittest.TestCase):
             previous_cwd = Path.cwd()
             os.chdir(tmp_dir)
             try:
-                with patch("main.requests.post", return_value=response):
+                with patch("src.ez_banana.cli.requests.post", return_value=response):
                     code, stdout, stderr = self.run_main(["--prompt", "a cat"])
             finally:
                 os.chdir(previous_cwd)
@@ -86,7 +87,7 @@ class OpenRouterCliTests(unittest.TestCase):
             out_dir = temp_path / "generated"
 
             def fake_post(*args, **kwargs):
-                self.assertEqual(args[0], cli.OPENROUTER_CHAT_COMPLETIONS_URL)
+                self.assertEqual(args[0], config.OPENROUTER_CHAT_COMPLETIONS_URL)
                 self.assertEqual(kwargs["headers"]["Authorization"], "Bearer test-key")
                 self.assertEqual(kwargs["json"]["modalities"], ["image", "text"])
 
@@ -113,7 +114,7 @@ class OpenRouterCliTests(unittest.TestCase):
                     }
                 )
 
-            with patch("main.requests.post", side_effect=fake_post):
+            with patch("src.ez_banana.cli.requests.post", side_effect=fake_post):
                 code, stdout, stderr = self.run_main(
                     [
                         "--prompt",
@@ -135,9 +136,8 @@ class OpenRouterCliTests(unittest.TestCase):
         stdout = io.StringIO()
         stderr = io.StringIO()
         with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop(cli.OPENROUTER_API_KEY_ENV, None)
+            os.environ.pop(config.OPENROUTER_API_KEY_ENV, None)
             with (
-                patch("main.load_dotenv", return_value=False),
                 patch("sys.stdout", stdout),
                 patch("sys.stderr", stderr),
             ):
@@ -161,7 +161,7 @@ class OpenRouterCliTests(unittest.TestCase):
         http_error = requests.exceptions.HTTPError(response=error_response)
         response = FakeResponse({}, http_error=http_error)
 
-        with patch("main.requests.post", return_value=response):
+        with patch("src.ez_banana.cli.requests.post", return_value=response):
             code, _stdout, stderr = self.run_main(["--prompt", "x"])
 
         self.assertEqual(code, 1)
@@ -170,7 +170,7 @@ class OpenRouterCliTests(unittest.TestCase):
 
     def test_timeout_returns_actionable_error(self) -> None:
         with patch(
-            "main.requests.post",
+            "src.ez_banana.cli.requests.post",
             side_effect=requests.exceptions.Timeout("timed out"),
         ):
             code, _stdout, stderr = self.run_main(["--prompt", "x"])
@@ -194,7 +194,7 @@ class OpenRouterCliTests(unittest.TestCase):
             out_dir = Path(tmp_dir) / "nested" / "output"
             self.assertFalse(out_dir.exists())
 
-            with patch("main.requests.post", return_value=response):
+            with patch("src.ez_banana.cli.requests.post", return_value=response):
                 code, stdout, _stderr = self.run_main(
                     ["--prompt", "x", "--out-dir", str(out_dir)]
                 )
@@ -210,12 +210,11 @@ class OpenRouterCliTests(unittest.TestCase):
             colliding = out_dir / "ezbanana_20260203_040506_00000001.png"
             colliding.write_bytes(b"exists")
 
-            with (
-                patch("main.datetime") as mock_datetime,
-                patch("main.secrets.randbelow", side_effect=[1, 2]),
-            ):
-                mock_datetime.now.return_value = fixed_datetime
-                output_path = cli.generate_unique_output_path(out_dir)
+            output_path = output.generate_unique_output_path(
+                out_dir,
+                now_fn=lambda: fixed_datetime,
+                randbelow_fn=lambda _upper_bound, seq=iter([1, 2]): next(seq),
+            )
 
             self.assertEqual(output_path.name, "ezbanana_20260203_040506_00000002.png")
 
