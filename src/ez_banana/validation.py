@@ -42,7 +42,12 @@ def validate_reference_image(image_value: str | None) -> tuple[Path | None, str 
             f"Reference image is not readable: {image_path} ({exc})"
         ) from exc
 
-    guessed_mime_type, _ = mimetypes.guess_type(str(image_path))
+    # Handle .jpg extension manually since mimetypes may return application/jpg
+    if image_path.suffix.lower() == ".jpg":
+        guessed_mime_type = "image/jpeg"
+    else:
+        guessed_mime_type, _ = mimetypes.guess_type(str(image_path))
+
     if guessed_mime_type not in SUPPORTED_REFERENCE_IMAGE_MIME_TYPES:
         supported_types = ", ".join(sorted(SUPPORTED_REFERENCE_IMAGE_MIME_TYPES))
         raise CliError(
