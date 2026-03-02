@@ -24,3 +24,11 @@ class OpenRouterRequest:
 class OpenRouterResult:
     image_bytes: bytes
     image_data_url: str
+
+
+@dataclass(frozen=True)
+class GenerationSuccess:
+    path: Path
+    filename: str
+    out_dir: Path
+    model: str

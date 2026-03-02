@@ -9,11 +9,13 @@ description = "CLI image generation through OpenRouter"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "fastmcp>=3.0.2",
     "requests>=2.32.5",
 ]
 
 [project.scripts]
 ez-banana = "ez_banana.cli:main"
+ez-banana-mcp = "ez_banana.mcp_server:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

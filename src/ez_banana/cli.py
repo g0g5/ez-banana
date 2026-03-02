@@ -5,10 +5,8 @@ import sys
 
 import requests
 
+from .app import run_generation_flow
 from .errors import CliError
-from .openrouter import build_openrouter_request, generate_image_from_openrouter
-from .output import save_generated_image
-from .validation import validate_inputs
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -37,13 +35,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
-        validated_input = validate_inputs(args)
-        openrouter_request = build_openrouter_request(validated_input)
-        result = generate_image_from_openrouter(openrouter_request, post=requests.post)
-        saved_path = save_generated_image(result.image_bytes, validated_input.out_dir)
+        generation = run_generation_flow(
+            prompt=args.prompt,
+            image=args.image,
+            out_dir=args.out_dir,
+            post=requests.post,
+        )
     except CliError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 
-    print(saved_path)
+    print(generation.path)
     return 0

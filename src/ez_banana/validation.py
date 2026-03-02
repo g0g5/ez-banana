@@ -68,14 +68,24 @@ def ensure_output_directory(out_dir_value: str) -> Path:
 
 
 def validate_inputs(args: argparse.Namespace) -> ValidatedInput:
+    return validate_input_values(
+        prompt=args.prompt,
+        image=args.image,
+        out_dir=args.out_dir,
+    )
+
+
+def validate_input_values(
+    *, prompt: str, image: str | None, out_dir: str
+) -> ValidatedInput:
     api_key = require_api_key()
-    prompt = validate_prompt(args.prompt)
-    image_path, image_mime_type = validate_reference_image(args.image)
-    out_dir = ensure_output_directory(args.out_dir)
+    validated_prompt = validate_prompt(prompt)
+    image_path, image_mime_type = validate_reference_image(image)
+    validated_out_dir = ensure_output_directory(out_dir)
     return ValidatedInput(
         api_key=api_key,
-        prompt=prompt,
+        prompt=validated_prompt,
         image_path=image_path,
         image_mime_type=image_mime_type,
-        out_dir=out_dir,
+        out_dir=validated_out_dir,
     )
