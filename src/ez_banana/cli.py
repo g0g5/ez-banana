@@ -7,6 +7,7 @@ import requests
 
 from .app import run_generation_flow
 from .errors import CliError
+from .openrouter import VALID_ASPECT_RATIOS, VALID_IMAGE_SIZES
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -28,6 +29,18 @@ def build_parser() -> argparse.ArgumentParser:
         default=".",
         help="Output directory for generated image files (default: current directory).",
     )
+    parser.add_argument(
+        "--aspect-ratio",
+        choices=VALID_ASPECT_RATIOS,
+        default="1:1",
+        help=f"Aspect ratio for generated image (default: 1:1). Choices: {', '.join(VALID_ASPECT_RATIOS)}",
+    )
+    parser.add_argument(
+        "--image-size",
+        choices=VALID_IMAGE_SIZES,
+        default="1K",
+        help=f"Resolution size for generated image (default: 1K). Choices: {', '.join(VALID_IMAGE_SIZES)}",
+    )
     return parser
 
 
@@ -39,6 +52,8 @@ def main(argv: list[str] | None = None) -> int:
             prompt=args.prompt,
             image=args.image,
             out_dir=args.out_dir,
+            aspect_ratio=args.aspect_ratio,
+            image_size=args.image_size,
             post=requests.post,
         )
     except CliError as exc:

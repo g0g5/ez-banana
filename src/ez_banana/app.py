@@ -16,12 +16,16 @@ def run_generation_flow(
     prompt: str,
     image: str | None = None,
     out_dir: str = ".",
+    aspect_ratio: str | None = None,
+    image_size: str | None = None,
     post: Callable[..., Any] = requests.post,
 ) -> GenerationSuccess:
     validated_input = validate_input_values(
         prompt=prompt,
         image=image,
         out_dir=out_dir,
+        aspect_ratio=aspect_ratio,
+        image_size=image_size,
     )
     openrouter_request = build_openrouter_request(validated_input)
     result = generate_image_from_openrouter(openrouter_request, post=post)

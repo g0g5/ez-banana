@@ -12,6 +12,26 @@ from .errors import CliError
 from .models import OpenRouterRequest, OpenRouterResult, ValidatedInput
 
 
+# Valid aspect ratios for image generation
+VALID_ASPECT_RATIOS = [
+    "1:1",
+    "2:3",
+    "3:2",
+    "3:4",
+    "4:3",
+    "4:5",
+    "5:4",
+    "9:16",
+    "16:9",
+    "21:9",
+]
+DEFAULT_ASPECT_RATIO = "1:1"
+
+# Valid image sizes for image generation
+VALID_IMAGE_SIZES = ["1K", "2K", "4K"]
+DEFAULT_IMAGE_SIZE = "1K"
+
+
 def build_request_headers(api_key: str) -> dict[str, str]:
     return {
         "Authorization": f"Bearer {api_key}",
@@ -47,11 +67,23 @@ def build_request_payload(validated: ValidatedInput) -> dict[str, Any]:
     else:
         message_content = validated.prompt
 
-    return {
+    payload: dict[str, Any] = {
         "model": DEFAULT_MODEL,
         "modalities": ["image", "text"],
         "messages": [{"role": "user", "content": message_content}],
     }
+
+    # Only include image_config if non-default values are provided
+    image_config: dict[str, str] = {}
+    if validated.aspect_ratio != DEFAULT_ASPECT_RATIO:
+        image_config["aspect_ratio"] = validated.aspect_ratio
+    if validated.image_size != DEFAULT_IMAGE_SIZE:
+        image_config["image_size"] = validated.image_size
+
+    if image_config:
+        payload["image_config"] = image_config
+
+    return payload
 
 
 def build_openrouter_request(validated: ValidatedInput) -> OpenRouterRequest:

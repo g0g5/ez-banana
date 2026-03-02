@@ -63,12 +63,20 @@ class McpServerTests(unittest.TestCase):
                 )
 
             def run_flow_with_fake_post(
-                *, prompt: str, image: str | None, out_dir: str
+                *,
+                prompt: str,
+                image: str | None,
+                out_dir: str,
+                aspect_ratio: str | None = None,
+                image_size: str | None = None,
+                **kwargs,
             ):
                 return app.run_generation_flow(
                     prompt=prompt,
                     image=image,
                     out_dir=out_dir,
+                    aspect_ratio=aspect_ratio,
+                    image_size=image_size,
                     post=fake_post,
                 )
 
@@ -128,12 +136,20 @@ class McpServerTests(unittest.TestCase):
                 )
 
             def run_flow_with_fake_post(
-                *, prompt: str, image: str | None, out_dir: str
+                *,
+                prompt: str,
+                image: str | None,
+                out_dir: str,
+                aspect_ratio: str | None = None,
+                image_size: str | None = None,
+                **kwargs,
             ):
                 return app.run_generation_flow(
                     prompt=prompt,
                     image=image,
                     out_dir=out_dir,
+                    aspect_ratio=aspect_ratio,
+                    image_size=image_size,
                     post=fake_post,
                 )
 
@@ -184,11 +200,21 @@ class McpServerTests(unittest.TestCase):
         def fake_post(*_args, **_kwargs):
             return FakeResponse({}, http_error=http_error)
 
-        def run_flow_with_http_error(*, prompt: str, image: str | None, out_dir: str):
+        def run_flow_with_http_error(
+            *,
+            prompt: str,
+            image: str | None,
+            out_dir: str,
+            aspect_ratio: str | None = None,
+            image_size: str | None = None,
+            **kwargs,
+        ):
             return app.run_generation_flow(
                 prompt=prompt,
                 image=image,
                 out_dir=out_dir,
+                aspect_ratio=aspect_ratio,
+                image_size=image_size,
                 post=fake_post,
             )
 
@@ -211,11 +237,21 @@ class McpServerTests(unittest.TestCase):
         def fake_post(*_args, **_kwargs):
             raise requests.exceptions.Timeout("timed out")
 
-        def run_flow_with_timeout(*, prompt: str, image: str | None, out_dir: str):
+        def run_flow_with_timeout(
+            *,
+            prompt: str,
+            image: str | None,
+            out_dir: str,
+            aspect_ratio: str | None = None,
+            image_size: str | None = None,
+            **kwargs,
+        ):
             return app.run_generation_flow(
                 prompt=prompt,
                 image=image,
                 out_dir=out_dir,
+                aspect_ratio=aspect_ratio,
+                image_size=image_size,
                 post=fake_post,
             )
 
@@ -233,6 +269,250 @@ class McpServerTests(unittest.TestCase):
 
         payload = self.assert_tool_error(ctx.exception, "timeout_error")
         self.assertIn("timed out", payload["message"].lower())
+
+    def test_aspect_ratio_parameter_passed_to_generator(self) -> None:
+        image_data_url = "data:image/png;base64," + base64.b64encode(
+            b"aspect-test"
+        ).decode("ascii")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            out_dir = Path(tmp_dir)
+            received_aspect_ratio: str | None = None
+
+            def fake_post(*args, **kwargs):
+                nonlocal received_aspect_ratio
+                if "image_config" in kwargs["json"]:
+                    received_aspect_ratio = kwargs["json"]["image_config"].get(
+                        "aspect_ratio"
+                    )
+                return FakeResponse(
+                    {
+                        "choices": [
+                            {
+                                "message": {
+                                    "images": [{"image_url": {"url": image_data_url}}]
+                                }
+                            }
+                        ]
+                    }
+                )
+
+            def run_flow_with_capture(
+                *,
+                prompt: str,
+                image: str | None,
+                out_dir: str,
+                aspect_ratio: str | None = None,
+                image_size: str | None = None,
+                **kwargs,
+            ):
+                return app.run_generation_flow(
+                    prompt=prompt,
+                    image=image,
+                    out_dir=out_dir,
+                    aspect_ratio=aspect_ratio,
+                    image_size=image_size,
+                    post=fake_post,
+                )
+
+            with (
+                patch.dict(
+                    os.environ, {config.OPENROUTER_API_KEY_ENV: "test-key"}, clear=False
+                ),
+                patch(
+                    "src.ez_banana.mcp_server.run_generation_flow",
+                    side_effect=run_flow_with_capture,
+                ),
+            ):
+                result = mcp_server.generate_image(
+                    prompt="test prompt", out_dir=str(out_dir), aspect_ratio="16:9"
+                )
+
+            self.assertEqual(received_aspect_ratio, "16:9")
+            self.assertTrue(Path(result["path"]).exists())
+
+    def test_image_size_parameter_passed_to_generator(self) -> None:
+        image_data_url = "data:image/png;base64," + base64.b64encode(
+            b"size-test"
+        ).decode("ascii")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            out_dir = Path(tmp_dir)
+            received_image_size: str | None = None
+
+            def fake_post(*args, **kwargs):
+                nonlocal received_image_size
+                if "image_config" in kwargs["json"]:
+                    received_image_size = kwargs["json"]["image_config"].get(
+                        "image_size"
+                    )
+                return FakeResponse(
+                    {
+                        "choices": [
+                            {
+                                "message": {
+                                    "images": [{"image_url": {"url": image_data_url}}]
+                                }
+                            }
+                        ]
+                    }
+                )
+
+            def run_flow_with_capture(
+                *,
+                prompt: str,
+                image: str | None,
+                out_dir: str,
+                aspect_ratio: str | None = None,
+                image_size: str | None = None,
+                **kwargs,
+            ):
+                return app.run_generation_flow(
+                    prompt=prompt,
+                    image=image,
+                    out_dir=out_dir,
+                    aspect_ratio=aspect_ratio,
+                    image_size=image_size,
+                    post=fake_post,
+                )
+
+            with (
+                patch.dict(
+                    os.environ, {config.OPENROUTER_API_KEY_ENV: "test-key"}, clear=False
+                ),
+                patch(
+                    "src.ez_banana.mcp_server.run_generation_flow",
+                    side_effect=run_flow_with_capture,
+                ),
+            ):
+                result = mcp_server.generate_image(
+                    prompt="test prompt", out_dir=str(out_dir), image_size="4K"
+                )
+
+            self.assertEqual(received_image_size, "4K")
+            self.assertTrue(Path(result["path"]).exists())
+
+    def test_default_values_use_defaults_no_image_config(self) -> None:
+        image_data_url = "data:image/png;base64," + base64.b64encode(
+            b"default-test"
+        ).decode("ascii")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            out_dir = Path(tmp_dir)
+            payload_captured: dict | None = None
+
+            def fake_post(*args, **kwargs):
+                nonlocal payload_captured
+                payload_captured = kwargs["json"]
+                return FakeResponse(
+                    {
+                        "choices": [
+                            {
+                                "message": {
+                                    "images": [{"image_url": {"url": image_data_url}}]
+                                }
+                            }
+                        ]
+                    }
+                )
+
+            def run_flow_with_capture(
+                *,
+                prompt: str,
+                image: str | None,
+                out_dir: str,
+                aspect_ratio: str | None = None,
+                image_size: str | None = None,
+                **kwargs,
+            ):
+                return app.run_generation_flow(
+                    prompt=prompt,
+                    image=image,
+                    out_dir=out_dir,
+                    aspect_ratio=aspect_ratio,
+                    image_size=image_size,
+                    post=fake_post,
+                )
+
+            with (
+                patch.dict(
+                    os.environ, {config.OPENROUTER_API_KEY_ENV: "test-key"}, clear=False
+                ),
+                patch(
+                    "src.ez_banana.mcp_server.run_generation_flow",
+                    side_effect=run_flow_with_capture,
+                ),
+            ):
+                result = mcp_server.generate_image(
+                    prompt="test prompt", out_dir=str(out_dir)
+                )
+
+            # With default values (1:1 and 1K), image_config should not be present
+            self.assertNotIn("image_config", payload_captured or {})
+            self.assertTrue(Path(result["path"]).exists())
+
+    def test_all_image_parameters_passed_together(self) -> None:
+        image_data_url = "data:image/png;base64," + base64.b64encode(
+            b"all-params-test"
+        ).decode("ascii")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            out_dir = Path(tmp_dir)
+            payload_captured: dict | None = None
+
+            def fake_post(*args, **kwargs):
+                nonlocal payload_captured
+                payload_captured = kwargs["json"]
+                return FakeResponse(
+                    {
+                        "choices": [
+                            {
+                                "message": {
+                                    "images": [{"image_url": {"url": image_data_url}}]
+                                }
+                            }
+                        ]
+                    }
+                )
+
+            def run_flow_with_capture(
+                *,
+                prompt: str,
+                image: str | None,
+                out_dir: str,
+                aspect_ratio: str | None = None,
+                image_size: str | None = None,
+                **kwargs,
+            ):
+                return app.run_generation_flow(
+                    prompt=prompt,
+                    image=image,
+                    out_dir=out_dir,
+                    aspect_ratio=aspect_ratio,
+                    image_size=image_size,
+                    post=fake_post,
+                )
+
+            with (
+                patch.dict(
+                    os.environ, {config.OPENROUTER_API_KEY_ENV: "test-key"}, clear=False
+                ),
+                patch(
+                    "src.ez_banana.mcp_server.run_generation_flow",
+                    side_effect=run_flow_with_capture,
+                ),
+            ):
+                result = mcp_server.generate_image(
+                    prompt="test prompt",
+                    out_dir=str(out_dir),
+                    aspect_ratio="21:9",
+                    image_size="2K",
+                )
+
+            image_config = (payload_captured or {}).get("image_config", {})
+            self.assertEqual(image_config.get("aspect_ratio"), "21:9")
+            self.assertEqual(image_config.get("image_size"), "2K")
+            self.assertTrue(Path(result["path"]).exists())
 
 
 if __name__ == "__main__":

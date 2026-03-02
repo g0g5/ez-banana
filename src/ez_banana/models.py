@@ -12,6 +12,8 @@ class ValidatedInput:
     image_path: Path | None
     image_mime_type: str | None
     out_dir: Path
+    aspect_ratio: str
+    image_size: str
 
 
 @dataclass(frozen=True)
